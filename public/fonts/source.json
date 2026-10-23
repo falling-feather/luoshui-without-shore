@@ -1,0 +1,52 @@
+{
+  "family": "Noto Serif SC",
+  "origin": "https://fonts.google.com/noto/specimen/Noto+Serif+SC",
+  "license": "SIL Open Font License 1.1",
+  "variable_weight": "400-700",
+  "subset_characters": 1044,
+  "source_of_subset": "Current src/ text; bounded text requests with one verified subset each",
+  "stylesheet": "luo-serif.css",
+  "fonts": [
+    {
+      "file": "luo-serif-part-01.woff2",
+      "characters": 140,
+      "bytes": 54240
+    },
+    {
+      "file": "luo-serif-part-02.woff2",
+      "characters": 140,
+      "bytes": 61064
+    },
+    {
+      "file": "luo-serif-part-03.woff2",
+      "characters": 140,
+      "bytes": 63244
+    },
+    {
+      "file": "luo-serif-part-04.woff2",
+      "characters": 140,
+      "bytes": 62752
+    },
+    {
+      "file": "luo-serif-part-05.woff2",
+      "characters": 140,
+      "bytes": 59060
+    },
+    {
+      "file": "luo-serif-part-06.woff2",
+      "characters": 140,
+      "bytes": 62160
+    },
+    {
+      "file": "luo-serif-part-07.woff2",
+      "characters": 140,
+      "bytes": 63404
+    },
+    {
+      "file": "luo-serif-part-08.woff2",
+      "characters": 64,
+      "bytes": 22984
+    }
+  ],
+  "bytes": 448908
+}

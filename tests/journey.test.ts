@@ -1,0 +1,97 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { createJourney, enterJourney, visitChapter, tickJourney, setSuspended, sendMessage, finishJourney, restartJourney, nudgeJourney, MESSAGE_DURATION } from '../src/experience/journey.ts';
+
+test('选章只记录实际进入的章节，回访保留经历并取消旧传辞', () => {
+  const s = createJourney();
+  enterJourney(s, 'message');
+  assert.deepEqual([...s.visited], ['message']);
+  sendMessage(s);
+  tickJourney(s, 4, 0);
+  visitChapter(s, 'dance');
+  assert.equal(s.letter.phase, 'waiting');
+  assert.equal(s.position, 0);
+  visitChapter(s, 'message');
+  assert.deepEqual([...s.visited], ['message', 'dance']);
+  assert.equal(s.visits.length, 3);
+});
+test('传辞经过传出、回应和抵达，不能在其他章节或重复触发', () => {
+  const s = createJourney();
+  enterJourney(s);
+  assert.equal(sendMessage(s), false);
+  visitChapter(s, 'message');
+  assert.equal(sendMessage(s), true);
+  assert.equal(sendMessage(s), false);
+  tickJourney(s, MESSAGE_DURATION.outbound - .1, 0);
+  assert.equal(s.letter.phase, 'outbound');
+  tickJourney(s, MESSAGE_DURATION.arrival + .2, 0);
+  assert.equal(s.letter.phase, 'answer');
+  tickJourney(s, MESSAGE_DURATION.answer + .1, 0);
+  assert.equal(s.letter.phase, 'settled');
+  assert.equal(s.messages.length, 1);
+  assert.ok(s.messages[0].time > 15);
+  assert.equal(sendMessage(s), true);
+});
+test('阅读、离焦与暂停冻结传辞和停驻，不补算时间', () => {
+  const s = createJourney();
+  enterJourney(s, 'message');
+  sendMessage(s);
+  tickJourney(s, 3, 0);
+  const before = structuredClone(s);
+  setSuspended(s, true);
+  tickJourney(s, 100, 1);
+  assert.equal(s.letter.elapsed, before.letter.elapsed);
+  assert.equal(s.elapsed, before.elapsed);
+  assert.equal(s.position, before.position);
+  setSuspended(s, false);
+  tickJourney(s, 1, 0);
+  assert.ok(Math.abs(s.letter.elapsed - 4) < .001);
+});
+test('绘制频率不改变行走、传辞阶段或停驻记录', () => {
+  const a = createJourney(), b = createJourney();
+  for (const s of [a, b]) { enterJourney(s, 'message'); sendMessage(s); }
+  for (let i = 0; i < 1800; i++) tickJourney(a, 1/60, i < 600 ? 1 : 0);
+  for (let i = 0; i < 30; i++) tickJourney(b, 1, i < 10 ? 1 : 0);
+  assert.ok(Math.abs(a.position - b.position) < .001);
+  assert.ok(Math.abs(a.elapsed - b.elapsed) < .001);
+  assert.equal(a.letter.phase, b.letter.phase);
+  assert.equal(a.messages.length, b.messages.length);
+  assert.equal(a.stops.length, b.stops.length);
+});
+test('行走有边界，回望不强制点击全部诗句，重开清空真实记录', () => {
+  const s = createJourney();
+  enterJourney(s);
+  tickJourney(s, 90, 1);
+  assert.equal(s.position, 1);
+  assert.equal(s.velocity, 0);
+  tickJourney(s, 90, -1);
+  assert.equal(s.position, 0);
+  assert.equal(s.velocity, 0);
+  assert.equal(finishJourney(s), false);
+  visitChapter(s, 'memory');
+  assert.equal(finishJourney(s), true);
+  assert.equal(s.visited.size, 2);
+  assert.equal(s.mode, 'finished');
+  restartJourney(s);
+  assert.equal(s.mode, 'cover');
+  assert.equal(s.visited.size, 0);
+  assert.equal(s.messages.length, 0);
+  assert.equal(s.stops.length, 0);
+});
+test('零位移不破坏停驻，滚动被暂停拦截，轨迹保留实际位置', () => {
+  const s=createJourney();enterJourney(s);tickJourney(s,2,0);
+  const idle=s.idleTime,trace=s.trail.length;
+  nudgeJourney(s,0);
+  assert.equal(s.idleTime,idle);
+  assert.equal(s.trail.length,trace);
+  nudgeJourney(s,.35);
+  assert.equal(s.position,.35);
+  assert.equal(s.trail.at(-1)!.position,.35);
+  setSuspended(s,true);nudgeJourney(s,.5);
+  assert.equal(s.position,.35);
+  setSuspended(s,false);nudgeJourney(s,1);
+  const endTrace=s.trail.length;
+  nudgeJourney(s,.1);
+  assert.equal(s.velocity,0);
+  assert.equal(s.trail.length,endTrace);
+});
